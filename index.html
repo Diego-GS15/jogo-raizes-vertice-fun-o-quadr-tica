@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Interativo: Encontrando Raízes (Bhaskara)</title>
+    <!-- Importando o Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #6a4c93; 
+            --success: #8ac926;
+            --warning: #ffca3a;
+            --danger: #ff595e;
+            --background: #f8f9fa;
+            --text: #2b2d42;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1, h2, h3 { text-align: center; }
+        .container {
+            max-width: 1100px;
+            width: 100%;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+        
+        /* Tela inicial */
+        #start-screen { text-align: center; }
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            color: white;
+        }
+        .btn-easy { background-color: var(--success); color: #111; }
+        .btn-medium { background-color: var(--warning); color: #111; }
+        .btn-hard { background-color: var(--danger); }
+        .btn-action { background-color: var(--primary); margin-top: 15px; width: 100%; }
+        .btn-end { background-color: #6c757d; }
+        .btn:hover { opacity: 0.8; transform: translateY(-2px); }
+        .btn:disabled { background-color: #ccc; cursor: not-allowed; transform: none; }
+        
+        /* Tela do Jogo */
+        #game-screen { display: none; }
+        .header-game {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .score-board { font-size: 1.1em; font-weight: bold; color: var(--primary); }
+        .progress-board { font-size: 1.1em; font-weight: bold; color: var(--text); }
+        .stars-display { font-size: 1.3em; letter-spacing: 2px; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
+        
+        .main-content {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        .left-panel { flex: 1; min-width: 320px; }
+        .right-panel {
+            flex: 1;
+            min-width: 320px;
+            display: flex;
+            flex-direction: column;
+            background: #f1f3f5;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .function-display {
+            font-size: 1.8em;
+            background: #f4f0fa;
+            color: var(--primary);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 15px;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+        }
+        
+        .calc-box {
+            background: #fff;
+            padding: 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .input-group label { font-weight: bold; font-size: 1.1em; }
+        
+        input[type="number"], input[type="text"], select.calc-select {
+            width: 90px; padding: 10px; font-size: 1em; text-align: center;
+            border: 2px solid #cbd5e1; border-radius: 6px;
+        }
+        select.calc-select { width: 140px; }
+        input:focus, select.calc-select:focus { outline: none; border-color: var(--primary); }
+        
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #fee2e2;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        .checkbox-container input { transform: scale(1.5); cursor: pointer; }
+
+        .correct { background-color: #d8f3dc !important; border-color: var(--success) !important; }
+        .incorrect { background-color: #ffddd2 !important; border-color: var(--danger) !important; }
+        
+        #chart-container { width: 100%; height: 400px; flex-grow: 1; }
+        #feedback { font-weight: bold; margin-top: 10px; text-align: center; min-height: 24px; font-size: 1.1em; }
+        
+        /* Sessão Bônus */
+        #bonus-section {
+            display: none;
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 2px solid var(--warning);
+        }
+        select { padding: 10px; width: 100%; margin-bottom: 12px; border-radius: 6px; font-size: 1em; border: 1px solid #ccc;}
+        
+        .formula-hint { font-size: 0.9em; color: #64748b; text-align: center; margin-bottom: 15px;}
+        .vertex-inputs { display: flex; gap: 10px; margin-bottom: 12px; }
+        .vertex-inputs input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1em; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- TELA INICIAL -->
+    <div id="start-screen">
+        <h1>🔍 Caçadores de Raízes</h1>
+        <p>Encontre o Delta, a concavidade e as raízes usando a fórmula de Bhaskara!</p>
+        <p>Escolha o nível para começar (Acerte 10 com 100% para ganhar ⭐ e ser promovido!):</p>
+        <button class="btn btn-easy" onclick="startGame('easy')">Fácil</button>
+        <button class="btn btn-medium" onclick="startGame('medium')">Médio</button>
+        <button class="btn btn-hard" onclick="startGame('hard')">Difícil</button>
+        
+        <div style="margin-top: 30px; text-align: left; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
+            <h3>Regras do Jogo:</h3>
+            <ul>
+                <li>Acertar Δ, Concavidade e Raízes de primeira: <b>+50 pontos</b></li>
+                <li>Cada erro nos cálculos: <b>-10 pontos</b></li>
+                <li>Pergunta Bônus (Vértice e Intervalos do Gráfico): <b>+20 pontos</b></li>
+                <li><b>Caminho do Campeão:</b> Avance de nível sem cometer nenhum erro para acumular estrelas!</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- TELA DO JOGO -->
+    <div id="game-screen">
+        <div class="header-game">
+            <div>
+                <h2>Nível: <span id="level-display"></span> <span class="stars-display" id="stars-display"></span></h2>
+                <div class="progress-board">Questão: <span id="question-count">1</span>/10</div>
+            </div>
+            <div style="text-align: right;">
+                <div class="score-board">Pontuação: <span id="score">0</span></div>
+                <button class="btn btn-end" onclick="endGame()">Encerrar</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Painel de Cálculos -->
+            <div class="left-panel">
+                <div class="function-display">
+                    f(x) = <span id="math-function"></span>
+                </div>
+                <div class="formula-hint">
+                    <b>Fórmulas:</b> Δ = b² - 4ac &nbsp; | &nbsp; x = (-b ± √Δ) / 2a &nbsp; | &nbsp; Xv = -b/2a &nbsp; | &nbsp; Yv = -Δ/4a
+                </div>
+                
+                <div class="calc-box">
+                    <div class="input-group">
+                        <label>Concavidade:</label>
+                        <select id="input-concavity" class="calc-select">
+                            <option value="">Selecione...</option>
+                            <option value="up">Para CIMA (U)</option>
+                            <option value="down">Para BAIXO (∩)</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Valor de Δ (Delta):</label>
+                        <input type="number" id="input-delta" placeholder="Δ">
+                    </div>
+
+                    <hr style="border: 1px solid #f1f5f9; margin: 15px 0;">
+                    
+                    <div class="input-group">
+                        <label>Raiz 1 (x₁):</label>
+                        <input type="number" id="input-x1" placeholder="x₁">
+                    </div>
+                    <div class="input-group">
+                        <label>Raiz 2 (x₂):</label>
+                        <input type="number" id="input-x2" placeholder="x₂">
+                    </div>
+                    
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="check-no-roots" onchange="toggleRoots()">
+                        <span style="color: #b91c1c; font-weight: bold;">Não possui raízes reais (Δ &lt; 0)</span>
+                    </label>
+
+                    <button class="btn btn-action" id="btn-verify" onclick="verifyAnswers()">Verificar Respostas e Gerar Gráfico</button>
+                    <div id="feedback"></div>
+                </div>
+
+                <!-- Sessão Bônus (Mostrada após gerar o gráfico) -->
+                <div id="bonus-section">
+                    <h3 style="margin-top: 0; color: #856404;">🔥 Desafio Bônus!</h3>
+                    
+                    <p style="margin-bottom: 5px; font-weight: bold;">Coordenadas do Vértice (Xv, Yv):</p>
+                    <div class="vertex-inputs">
+                        <!-- Alterado para type="text" para não bloquear vírgulas -->
+                        <input type="text" id="bonus-xv" placeholder="Xv">
+                        <input type="text" id="bonus-yv" placeholder="Yv">
+                    </div>
+
+                    <p style="margin-bottom: 5px; font-weight: bold;">Análise de Sinal:</p>
+                    <select id="bonus-interval">
+                        <option value="">A função é positiva (acima do eixo X) quando...</option>
+                        <option value="between">x está ENTRE as raízes</option>
+                        <option value="outside">x está FORA das raízes (antes de x1 ou depois de x2)</option>
+                        <option value="always">Sempre positiva (para qualquer x)</option>
+                        <option value="never">Nunca (Sempre negativa para qualquer x)</option>
+                    </select>
+
+                    <button class="btn btn-action" style="background-color: var(--warning); color: #111;" onclick="verifyBonus()" id="btn-bonus">Responder Bônus (+20 pts)</button>
+                    <div id="bonus-feedback" style="font-weight: bold; margin-top: 10px; text-align: center;"></div>
+                </div>
+                
+                <button class="btn btn-action" id="btn-next" style="display: none; background-color: var(--success);" onclick="nextQuestion()">Próxima Questão ➔</button>
+            </div>
+
+            <!-- Painel do Gráfico -->
+            <div class="right-panel">
+                <h3 style="margin-top: 0; text-align: center;">Gráfico da Função</h3>
+                <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center;" id="chart-placeholder">
+                    <p style="color: #888; font-style: italic; text-align: center;">O gráfico aparecerá aqui após você acertar os cálculos.</p>
+                </div>
+                <div id="chart-container" style="display: none;">
+                    <canvas id="quadChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let chartInstance = null;
+    let currentDifficulty = 'easy';
+    let currentEquation = {};
+    let currentScore = 0;
+    let questionCounter = 1;
+    let perfectStreak = true;
+    let stars = 0;
+    
+    let attempts = 0;
+    let firstTryBonus = true;
+
+    const levels = {
+        easy: { label: 'Fácil', maxQuestions: 10, nextLevel: 'medium' },
+        medium: { label: 'Médio', maxQuestions: 10, nextLevel: 'hard' },
+        hard: { label: 'Difícil', maxQuestions: 10, nextLevel: 'end' }
+    };
+
+    function startGame(difficulty) {
+        currentDifficulty = difficulty;
+        currentScore = 0;
+        questionCounter = 1;
+        perfectStreak = true;
+        
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'block';
+        
+        updateHeader();
+        generateQuestion();
+    }
+
+    function updateHeader() {
+        document.getElementById('level-display').innerText = levels[currentDifficulty].label;
+        document.getElementById('score').innerText = currentScore;
+        document.getElementById('question-count').innerText = questionCounter;
+        document.getElementById('stars-display').innerText = '⭐'.repeat(stars);
+    }
+
+    function getRandomInt(min, max) {
+        let val;
+        do { val = Math.floor(Math.random() * (max - min + 1)) + min; } while (val === 0);
+        return val;
+    }
+
+    function toggleRoots() {
+        const noRoots = document.getElementById('check-no-roots').checked;
+        const x1 = document.getElementById('input-x1');
+        const x2 = document.getElementById('input-x2');
+        
+        if (noRoots) {
+            x1.value = ''; x2.value = '';
+            x1.disabled = true; x2.disabled = true;
+            x1.classList.remove('incorrect', 'correct');
+            x2.classList.remove('incorrect', 'correct');
+        } else {
+            x1.disabled = false; x2.disabled = false;
+        }
+    }
+
+    function generateQuestion() {
+        document.getElementById('btn-verify').style.display = 'block';
+        document.getElementById('btn-next').style.display = 'none'; // Botão próxima escondido no início
+        document.getElementById('bonus-section').style.display = 'none';
+        document.getElementById('feedback').innerText = '';
+        document.getElementById('feedback').className = '';
+        document.getElementById('bonus-feedback').innerText = '';
+        
+        const inputs = ['input-concavity', 'input-delta', 'input-x1', 'input-x2', 'bonus-xv', 'bonus-yv', 'bonus-interval'];
+        inputs.forEach(id => {
+            const el = document.getElementById(id);
+            el.value = '';
+            el.disabled = false;
+            el.classList.remove('correct', 'incorrect');
+        });
+        
+        document.getElementById('check-no-roots').checked = false;
+        document.getElementById('check-no-roots').disabled = false;
+        toggleRoots();
+
+        document.getElementById('btn-bonus').disabled = false;
+        document.getElementById('chart-container').style.display = 'none';
+        document.getElementById('chart-placeholder').style.display = 'flex';
+        
+        if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+        attempts = 0;
+        firstTryBonus = true;
+
+        let a, b, c, r1, r2, delta;
+        let forceNoRoots = false;
+
+        if (currentDifficulty === 'medium' && Math.random() < 0.2) forceNoRoots = true;
+        if (currentDifficulty === 'hard' && Math.random() < 0.3) forceNoRoots = true;
+
+        if (forceNoRoots) {
+            if (currentDifficulty === 'medium') { a = 1; b = getRandomInt(-5, 5); } 
+            else { a = getRandomInt(-3, 3); b = getRandomInt(-5, 5); }
+            
+            let minC = Math.floor((b * b) / (4 * a)) + 1;
+            c = a > 0 ? getRandomInt(minC, minC + 5) : getRandomInt(minC - 5, minC - 1);
+            if (c === 0) c = 1;
+            delta = (b * b) - (4 * a * c);
+            
+        } else {
+            if (currentDifficulty === 'easy') {
+                a = 1;
+                r1 = getRandomInt(-5, 5);
+                r2 = getRandomInt(-5, 5);
+            } else if (currentDifficulty === 'medium') {
+                a = getRandomInt(-2, 2);
+                if (a === 0) a = 1;
+                r1 = getRandomInt(-6, 6);
+                r2 = getRandomInt(-6, 6);
+            } else {
+                a = getRandomInt(-3, 3);
+                if (a === 0) a = -1;
+                r1 = getRandomInt(-8, 8);
+                r2 = getRandomInt(-8, 8);
+            }
+            
+            b = -a * (r1 + r2);
+            c = a * (r1 * r2);
+            delta = (b * b) - (4 * a * c);
+        }
+
+        currentEquation = {
+            a: a, b: b, c: c, delta: delta,
+            x1: forceNoRoots ? null : Math.min(r1, r2),
+            x2: forceNoRoots ? null : Math.max(r1, r2)
+        };
+
+        let strA = a === 1 ? 'x²' : (a === -1 ? '-x²' : `${a}x²`);
+        let strB = b === 0 ? '' : (b === 1 ? '+x' : (b === -1 ? '-x' : (b > 0 ? `+${b}x` : `${b}x`)));
+        let strC = c === 0 ? '' : (c > 0 ? `+${c}` : `${c}`);
+        
+        document.getElementById('math-function').innerText = `${strA} ${strB} ${strC}`;
+        updateHeader();
+    }
+
+    function verifyAnswers() {
+        const concavityInput = document.getElementById('input-concavity');
+        const deltaInput = document.getElementById('input-delta');
+        const x1Input = document.getElementById('input-x1');
+        const x2Input = document.getElementById('input-x2');
+        const noRootsCheck = document.getElementById('check-no-roots').checked;
+        
+        let allCorrect = true;
+
+        if (concavityInput.value === '' || deltaInput.value === '') {
+            document.getElementById('feedback').innerText = 'Por favor, preencha a Concavidade e o Delta!';
+            document.getElementById('feedback').style.color = 'var(--danger)';
+            return;
+        }
+
+        let correctConcavity = currentEquation.a > 0 ? 'up' : 'down';
+        if (concavityInput.value === correctConcavity) {
+            concavityInput.classList.add('correct');
+            concavityInput.classList.remove('incorrect');
+            concavityInput.disabled = true;
+        } else {
+            concavityInput.classList.add('incorrect');
+            allCorrect = false;
+        }
+
+        if (parseInt(deltaInput.value) === currentEquation.delta) {
+            deltaInput.classList.add('correct');
+            deltaInput.classList.remove('incorrect');
+            deltaInput.disabled = true;
+        } else {
+            deltaInput.classList.add('incorrect');
+            allCorrect = false;
+        }
+
+        if (currentEquation.delta < 0) {
+            if (noRootsCheck) {
+                document.getElementById('check-no-roots').disabled = true;
+            } else {
+                allCorrect = false;
+            }
+        } else {
+            if (noRootsCheck) {
+                allCorrect = false;
+            } else {
+                if (x1Input.value === '' || x2Input.value === '') {
+                    document.getElementById('feedback').innerText = 'Preencha as raízes ou marque que não possui raízes reais!';
+                    document.getElementById('feedback').style.color = 'var(--warning)';
+                    return;
+                }
+                
+                let v1 = parseInt(x1Input.value);
+                let v2 = parseInt(x2Input.value);
+                let minRoot = Math.min(v1, v2);
+                let maxRoot = Math.max(v1, v2);
+
+                if (minRoot === currentEquation.x1 && maxRoot === currentEquation.x2) {
+                    x1Input.classList.add('correct');
+                    x2Input.classList.add('correct');
+                    x1Input.classList.remove('incorrect');
+                    x2Input.classList.remove('incorrect');
+                    x1Input.disabled = true;
+                    x2Input.disabled = true;
+                } else {
+                    x1Input.classList.add('incorrect');
+                    x2Input.classList.add('incorrect');
+                    allCorrect = false;
+                }
+            }
+        }
+
+        attempts++;
+
+        if (allCorrect) {
+            document.getElementById('feedback').innerText = '✨ Excelente! Gráfico liberado!';
+            document.getElementById('feedback').style.color = 'var(--success)';
+            document.getElementById('btn-verify').style.display = 'none';
+            // O botão próxima questão NÃO É MOSTRADO AQUI, garantindo que o bônus seja obrigatório
+            
+            if (firstTryBonus) { currentScore += 50; } else { currentScore += 20; }
+            updateHeader();
+            
+            drawChart();
+            document.getElementById('bonus-section').style.display = 'block';
+            
+        } else {
+            document.getElementById('feedback').innerText = '❌ Algo está incorreto. Revise os campos em vermelho!';
+            document.getElementById('feedback').style.color = 'var(--danger)';
+            firstTryBonus = false;
+            perfectStreak = false;
+            currentScore = Math.max(0, currentScore - 10);
+            updateHeader();
+        }
+    }
+
+    function drawChart() {
+        document.getElementById('chart-placeholder').style.display = 'none';
+        document.getElementById('chart-container').style.display = 'block';
+        
+        const ctx = document.getElementById('quadChart').getContext('2d');
+        const a = currentEquation.a, b = currentEquation.b, c = currentEquation.c;
+        
+        let vx = -b / (2 * a);
+        let startX = Math.floor(vx - 5);
+        let endX = Math.ceil(vx + 5);
+        
+        if (currentEquation.delta >= 0) {
+            startX = Math.min(startX, currentEquation.x1 - 2);
+            endX = Math.max(endX, currentEquation.x2 + 2);
+        }
+
+        const xValues = [];
+        const yValues = [];
+        for (let x = startX; x <= endX; x += 0.5) {
+            xValues.push(x);
+            yValues.push((a * x * x) + (b * x) + c);
+        }
+
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: xValues,
+                datasets: [{
+                    label: 'f(x)',
+                    data: yValues,
+                    borderColor: '#6a4c93',
+                    borderWidth: 3,
+                    pointRadius: 0,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: { 
+                            // Verifica se o valor exato no array xValues para essa posição é 0
+                            color: (ctx) => xValues[ctx.tick.value] === 0 ? '#000' : '#e2e8f0', 
+                            lineWidth: (ctx) => xValues[ctx.tick.value] === 0 ? 3 : 1 
+                        }
+                    },
+                    y: {
+                        grid: { 
+                            color: (ctx) => ctx.tick.value === 0 ? '#000' : '#e2e8f0', 
+                            lineWidth: (ctx) => ctx.tick.value === 0 ? 3 : 1 
+                        }
+                    }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+
+    function verifyBonus() {
+        // Pega o texto e substitui a vírgula por ponto para o JavaScript ler corretamente os decimais
+        const xvAns = document.getElementById('bonus-xv').value.replace(',', '.');
+        const yvAns = document.getElementById('bonus-yv').value.replace(',', '.');
+        const intervalAns = document.getElementById('bonus-interval').value;
+
+        if (xvAns.trim() === '' || yvAns.trim() === '' || !intervalAns) {
+            document.getElementById('bonus-feedback').innerText = 'Preencha Xv, Yv e a análise de sinal antes de prosseguir!';
+            document.getElementById('bonus-feedback').style.color = 'var(--danger)';
+            return;
+        }
+
+        let correctXv = -currentEquation.b / (2 * currentEquation.a);
+        let correctYv = -currentEquation.delta / (4 * currentEquation.a);
+
+        let isXvCorrect = Math.abs(parseFloat(xvAns) - correctXv) < 0.02;
+        let isYvCorrect = Math.abs(parseFloat(yvAns) - correctYv) < 0.02;
+
+        let correctInterval = '';
+        if (currentEquation.delta < 0) {
+            correctInterval = currentEquation.a > 0 ? 'always' : 'never';
+        } else if (currentEquation.delta === 0) {
+            correctInterval = currentEquation.a > 0 ? 'outside' : 'never';
+        } else {
+            correctInterval = currentEquation.a > 0 ? 'outside' : 'between';
+        }
+
+        if (isXvCorrect && isYvCorrect && intervalAns === correctInterval) {
+            document.getElementById('bonus-feedback').innerText = '🎉 Bônus Perfeito! +20 pontos';
+            document.getElementById('bonus-feedback').style.color = 'var(--success)';
+            currentScore += 20;
+            updateHeader();
+        } else {
+            let msg = `Quase! O vértice era (${correctXv.toFixed(2)}, ${correctYv.toFixed(2)}).`;
+            document.getElementById('bonus-feedback').innerText = msg;
+            document.getElementById('bonus-feedback').style.color = 'var(--danger)';
+        }
+
+        document.getElementById('btn-bonus').disabled = true;
+        document.getElementById('bonus-xv').disabled = true;
+        document.getElementById('bonus-yv').disabled = true;
+        document.getElementById('bonus-interval').disabled = true;
+
+        // O botão Próxima Questão só é exibido DEPOIS que o bônus foi respondido
+        document.getElementById('btn-next').style.display = 'block';
+    }
+
+    function nextQuestion() {
+        if (questionCounter >= levels[currentDifficulty].maxQuestions) {
+            finishLevel();
+        } else {
+            questionCounter++;
+            generateQuestion();
+        }
+    }
+
+    function finishLevel() {
+        let msg = `Você concluiu o nível ${levels[currentDifficulty].label}!\nPontuação: ${currentScore}`;
+        
+        if (perfectStreak) {
+            stars++;
+            msg += '\n🌟 INCRÍVEL! 100% DE ACERTO DE PRIMEIRA! Você ganhou uma Estrela! 🌟';
+        }
+
+        alert(msg);
+
+        let nextLvl = levels[currentDifficulty].nextLevel;
+        if (nextLvl !== 'end') {
+            if (perfectStreak || confirm(`Deseja avançar para o nível ${levels[nextLvl].label}?`)) {
+                startGame(nextLvl);
+            } else {
+                endGame();
+            }
+        } else {
+            alert(`🏆 PARABÉNS! 🏆\nVocê concluiu o nível Difícil!\nPontuação Final: ${currentScore} pontos.\nEstrelas Acumuladas: ${stars}`);
+            endGame();
+        }
+    }
+
+    function endGame() {
+        document.getElementById('game-screen').style.display = 'none';
+        document.getElementById('start-screen').style.display = 'block';
+        stars = 0; 
+    }
+</script>
+</body>
+</html>
